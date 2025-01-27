@@ -1,0 +1,30 @@
+FOR THE PENGUIN DATASET :
+1) Both Naive Bayes and Logistic Regression give same accuracy on training and test datasets.
+2) Both Naive Bayes and Logistic Regression have same Area Under ROC curve. They distinguish between the penguins classes everytime as we can observe from the results above.
+3) The gain curve reaches 100% by the last decile, and the lift curve starts high in the top deciles and gradually declines, indicating that the model performs well for the top-ranked predictions but diminishes in performance as it processes less likely predictions.
+4) For this dataset they perform equally well. there is not much to distinguish as it is very samll dataset.
+
+ERROR :
+* I was unable to load the MNIST dataset directly 
+i) using fetch_openml library there was an error :: ## URLError: <urlopen error [Errno 23] Host is unreachable> ## 
+ii)I tried using tensorflow but then I got value error :: ## ValueError: Can't find a pure Python 3 wheel for 'tensorflow'.
+See: https://pyodide.org/en/stable/usage/faq.html#why-can-t-micropip-find-a-pure-python-wheel-for-a-package
+You can use `await micropip.install(..., keep_going=True)` to get a list of all packages with missing wheels.##
+
+I could not work it out and play around with this error as I am using Library's computer but will try to do it once I get mine back from repair.
+So what I did is I used a MNIST CSV file , very small test file I got from Github [1]. 
+
+FOR THE MNIST DATASET :
+1) For Naive Bayes Approach I got accuracy of 55% and for Logistic Regression I got 91%.
+2) For this dataset NB approach performed very poor compared to LR approach, This happened because of the large dataset type and more classes.
+
+CONCLUSION FROM THE ABOVE OBSERVATION : 
+Logistic Regression works better for large as well as small dataset and Naive Bayes works good only with smaller dataset. 
+LR approach has an edge over NB approach.
+
+REFERENCES :
+mnist csv file : https://git-disl.github.io/GTDLBench/datasets/mnist_datasets/
+https://www.tensorflow.org/datasets/catalog/penguins
+https://allisonhorst.github.io/palmerpenguins/articles/intro.html
+ChatGpt
+StackOverflow
