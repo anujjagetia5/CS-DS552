@@ -1,0 +1,11 @@
+Q1: Why is the KL Divergence term important in the VAE loss function?
+The KL Divergence term in the VAE loss function regularizes the latent space by minimizing the difference between the learned distribution and a standard Gaussian distribution. This helps ensure that the latent space is smooth and continuous, which is critical for meaningful data generation from any point within the latent space​.
+
+Q2: How does the reparameterization trick enable backpropagation through the stochastic layers of a VAE?
+A critical challenge in training VAEs is that sampling directly from the latent distribution disrupts the ackpropagation process, making it non-differentiable. The reparameterization trick solves this by transforming the random sampling into a differentiable function.
+
+Q3: Why does a VAE use a probabilistic latent space instead of a fixed latent space?
+A VAE uses a probabilistic latent space to enable the generation of diverse outputs. By mapping data into distributions defined by a mean and variance, the model can sample different points to produce varied outputs. This probabilistic approach contrasts with traditional autoencoders, which map data to fixed points, limiting output diversity​.
+
+Q4: What role does KL Divergence play in ensuring a smooth latent space?
+KL Divergence ensures a smooth latent space by encouraging the learned latent distributions to closely resemble a standard Gaussian distribution. This regularization promotes continuity and coherence in the latent space, allowing the model to generate realistic data even from points that were not explicitly part of the training dat
