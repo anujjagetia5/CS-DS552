@@ -1,6 +1,4 @@
 
-tempfile
-base64
 streamlit
 pymupdf
 PyPDF2
