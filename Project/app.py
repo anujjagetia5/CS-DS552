@@ -153,7 +153,7 @@ summarizer = load_model()
 # Function to extract text from PDF with progress
 @st.cache_data
 def extract_text_from_pdf(uploaded_file, max_pages, sampling_strategy=None):
-    from pdf_utils_py import extract_text_from_pdf_parallel
+    from pdf_utils import extract_text_from_pdf_parallel
     
     # Convert sampling strategy to internal code
     strategy_code = sampling_strategy_map.get(sampling_strategy)
