@@ -96,6 +96,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Application Header
+st.markdown("<h1 class='main-header'>Your Personal PDF Summarizer</h1>", unsafe_allow_html=True)
+
 # App description
 st.markdown("""
 <div class="info-box">
