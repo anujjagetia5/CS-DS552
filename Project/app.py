@@ -49,7 +49,7 @@ st.markdown("""
     }
     .summary-title {
         background-color: #1E88E5;
-        color: white;
+        color: white !important;
         padding: 10px;
         border-radius: 5px 5px 0 0;
         text-align: center;
@@ -60,6 +60,18 @@ st.markdown("""
         border-radius: 0 0 5px 5px;
         padding: 15px;
         background-color: white;
+        color: #111111 !important;
+    }
+    /* This is important to override Streamlit's dark mode text color */
+    [data-testid="stAppViewContainer"] .summary-content p {
+        color: #111111 !important;
+    }
+    /* Additional override for dark mode */
+    @media (prefers-color-scheme: dark) {
+        .summary-content {
+            background-color: #f0f2f6;
+            color: #111111 !important;
+        }
     }
     .stButton>button {
         width: 100%;
@@ -83,8 +95,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Application Header
-st.markdown("<h1 class='main-header'>Your Personal PDF Summarizer</h1>", unsafe_allow_html=True)
+# Application Header# Display the summary content
+st.markdown(f'<div class="summary-content">{st.session_state.current_summary}</div>', unsafe_allow_html=True)
 
 # App description
 st.markdown("""
