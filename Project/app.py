@@ -91,6 +91,7 @@ st.markdown("""
         border-radius: 5px;
         padding: 10px;
         border-left: 5px solid #4CAF50;
+        color: black;
     }
 </style>
 """, unsafe_allow_html=True)
