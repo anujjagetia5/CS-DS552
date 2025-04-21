@@ -96,7 +96,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Application Header# Display the summary content
-st.markdown(f'<div class="summary-content">{st.session_state.current_summary}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="summary-content"></div>', unsafe_allow_html=True)
 
 # App description
 st.markdown("""
