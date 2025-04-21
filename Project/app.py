@@ -240,7 +240,7 @@ def generate_summary(is_regenerate=False):
             st.session_state.current_summary = summary
             
             # Force a rerun to display the new summary
-            st.experimental_rerun()
+            st.rerun()
 
 # Process PDFs if uploaded
 if uploaded_files:
