@@ -3,7 +3,7 @@ from PyPDF2 import PdfReader
 import base64
 import os
 import tempfile
-from summarizer_py import get_fast_summarizer, summarize_multiple_texts
+from summarizer import get_fast_summarizer, summarize_multiple_texts
 
 # Set page configuration with custom theme
 st.set_page_config(
