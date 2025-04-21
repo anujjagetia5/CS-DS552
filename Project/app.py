@@ -1,3 +1,14 @@
+import os
+import sys
+import nltk
+
+# Add the current directory to the path to import local modules
+sys.path.append(os.path.dirname(__file__))
+
+# Setup NLTK data
+from setup import download_nltk_data
+download_nltk_data()
+
 import streamlit as st
 from PyPDF2 import PdfReader
 import base64
