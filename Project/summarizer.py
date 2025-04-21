@@ -1,77 +1,85 @@
 from transformers import pipeline
 import nltk
-from nltk.tokenize import sent_tokenize
-from nltk.corpus import stopwords
-from nltk.cluster.util import cosine_distance
-import numpy as np
+import os
 import re
 import threading
 import random
+import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# At the top of your file after imports
-def ensure_nltk_resources():
-    """Ensure NLTK resources are available, with fallbacks if needed."""
-    # Try to load NLTK resources
-    try:
-        nltk.data.find('tokenizers/punkt')
-        nltk.data.find('corpora/stopwords')
-        return True
-    except LookupError as e:
-        print(f"NLTK resource error: {e}")
-        # Try download again directly
-        try:
-            nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
-            os.makedirs(nltk_data_dir, exist_ok=True)
-            nltk.data.path.insert(0, nltk_data_dir)
-            nltk.download('punkt', download_dir=nltk_data_dir)
-            nltk.download('stopwords', download_dir=nltk_data_dir)
-            return True
-        except Exception as e2:
-            print(f"Failed to download resources: {e2}")
-            return False
-
-# Call this function at module initialization
-ensure_nltk_resources()
-
-# Then modify your extractive_summarize function to include a fallback
-def extractive_summarize(text, num_sentences=5, randomness=False):
-    """Generate an extractive summary using the TextRank algorithm."""
-    try:
-        # Clean and split the text into sentences
-        cleaned_text = clean_text(text)
-        
-        try:
-            # Try NLTK's tokenizer
-            stop_words = set(stopwords.words('english'))
-            sentences = sent_tokenize(cleaned_text)
-        except Exception as e:
-            print(f"Using fallback tokenization due to error: {e}")
-            # Simple fallback tokenization
-            sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', cleaned_text) if s.strip()]
-            stop_words = {'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'else', 'when', 
-                         'at', 'from', 'by', 'for', 'with', 'about', 'against', 'between'}
-        
-        # Handle very short texts
-        if len(sentences) <= num_sentences:
-            return text
-            
-
-# Initialize NLTK
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', quiet=True)
-    
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords', quiet=True)
-
-# Global variable for the summarization pipeline
+# Global variables for the summarization pipeline
 _summarizer = None
 _fast_summarizer_initialized = False
 _lock = threading.Lock()
+
+# Define fallback stopwords in case NLTK fails
+FALLBACK_STOPWORDS = {
+    'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'else', 'when', 'at', 'from', 
+    'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 
+    'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 
+    'off', 'over', 'under', 'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being', 
+    'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'i', 'my', 'me', 
+    'we', 'our', 'you', 'your', 'he', 'his', 'him', 'she', 'her', 'it', 'its', 'they', 
+    'them', 'their', 'this', 'that', 'these', 'those'
+}
+
+# Define a fallback sentence tokenizer
+def fallback_sent_tokenize(text):
+    """Simple sentence tokenizer when NLTK is not available."""
+    print("Using fallback sentence tokenizer")
+    # Split by periods, exclamation points, and question marks followed by a space or newline
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    # Filter out empty sentences and those that are too short
+    return [s.strip() for s in sentences if s.strip() and len(s.strip()) > 10]
+
+# Fallback word tokenizer
+def fallback_word_tokenize(text):
+    """Simple word tokenizer when NLTK is not available."""
+    print("Using fallback word tokenizer")
+    # Split by whitespace and punctuation
+    words = re.findall(r'\b\w+\b', text.lower())
+    return words
+
+def ensure_nltk():
+    """Ensure NLTK resources are available, with robust error handling."""
+    print("Ensuring NLTK resources...")
+    try:
+        # Set up NLTK data directory
+        nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
+        os.makedirs(nltk_data_dir, exist_ok=True)
+        
+        # Add to NLTK's search path if not already there
+        if nltk_data_dir not in nltk.data.path:
+            nltk.data.path.insert(0, nltk_data_dir)
+        
+        print(f"NLTK data path: {nltk.data.path}")
+        
+        # Try to download and use the resources
+        try:
+            print("Attempting to download punkt...")
+            nltk.download('punkt', download_dir=nltk_data_dir, quiet=False)
+            print("Attempting to download stopwords...")
+            nltk.download('stopwords', download_dir=nltk_data_dir, quiet=False)
+            
+            # Test if they work
+            print("Testing if punkt works...")
+            from nltk.tokenize import sent_tokenize
+            test_sent = sent_tokenize("This is a test. This is another test.")
+            print(f"Punkt test result: {test_sent}")
+            
+            print("Testing if stopwords works...")
+            from nltk.corpus import stopwords
+            test_stops = stopwords.words('english')
+            print(f"Stopwords test sample: {test_stops[:5] if test_stops else 'No stopwords found'}")
+            
+            return True
+        except Exception as e:
+            print(f"NLTK resource initialization error: {e}")
+            return False
+            
+    except Exception as e:
+        print(f"NLTK setup error: {e}")
+        return False
 
 def get_summarizer():
     """Get or initialize the transformer-based summarizer."""
@@ -92,8 +100,8 @@ def get_fast_summarizer():
                     nltk.data.find('tokenizers/punkt')
                     nltk.data.find('corpora/stopwords')
                 except LookupError:
-                    nltk.download('punkt', quiet=True)
-                    nltk.download('stopwords', quiet=True)
+                    # If not found, download them
+                    ensure_nltk()
                 _fast_summarizer_initialized = True
     return True
 
@@ -108,30 +116,51 @@ def clean_text(text):
 def sentence_similarity(sent1, sent2, stopwords=None):
     """Calculate similarity between two sentences."""
     if stopwords is None:
-        stopwords = set(stopwords.words('english'))
+        try:
+            from nltk.corpus import stopwords as nltk_stopwords
+            stopwords = set(nltk_stopwords.words('english'))
+        except Exception as e:
+            print(f"Using fallback stopwords due to error: {e}")
+            stopwords = FALLBACK_STOPWORDS
     
     # Convert sentences to lowercase and tokenize
-    sent1 = [w.lower() for w in nltk.word_tokenize(sent1) if w.lower() not in stopwords]
-    sent2 = [w.lower() for w in nltk.word_tokenize(sent2) if w.lower() not in stopwords]
+    try:
+        from nltk.tokenize import word_tokenize
+        sent1_words = [w.lower() for w in word_tokenize(sent1) if w.lower() not in stopwords]
+        sent2_words = [w.lower() for w in word_tokenize(sent2) if w.lower() not in stopwords]
+    except Exception as e:
+        print(f"Using fallback word tokenization due to error: {e}")
+        sent1_words = [w for w in fallback_word_tokenize(sent1) if w not in stopwords]
+        sent2_words = [w for w in fallback_word_tokenize(sent2) if w not in stopwords]
     
     # Create word vectors
-    all_words = list(set(sent1 + sent2))
+    all_words = list(set(sent1_words + sent2_words))
     vector1 = [0] * len(all_words)
     vector2 = [0] * len(all_words)
     
     # Build the vectors
-    for w in sent1:
+    for w in sent1_words:
         if w in all_words:
             vector1[all_words.index(w)] += 1
             
-    for w in sent2:
+    for w in sent2_words:
         if w in all_words:
             vector2[all_words.index(w)] += 1
     
     # Calculate cosine similarity
-    if sum(vector1) > 0 and sum(vector2) > 0:
-        return 1 - cosine_distance(vector1, vector2)
-    return 0
+    try:
+        if sum(vector1) > 0 and sum(vector2) > 0:
+            dot_product = sum(a*b for a, b in zip(vector1, vector2))
+            norm_vec1 = sum(a*a for a in vector1) ** 0.5
+            norm_vec2 = sum(b*b for b in vector2) ** 0.5
+            
+            if norm_vec1 > 0 and norm_vec2 > 0:
+                return dot_product / (norm_vec1 * norm_vec2)
+            return 0
+        return 0
+    except Exception as e:
+        print(f"Error calculating sentence similarity: {e}")
+        return 0
 
 def build_similarity_matrix(sentences, stop_words):
     """Build similarity matrix for all sentences."""
@@ -149,24 +178,59 @@ def build_similarity_matrix(sentences, stop_words):
 def extract_key_phrases(text, num_phrases=5):
     """Extract key phrases from text using simple frequency analysis."""
     try:
-        stop_words = set(stopwords.words('english'))
-        words = nltk.word_tokenize(text.lower())
+        # Get stopwords safely
+        try:
+            from nltk.corpus import stopwords
+            stop_words = set(stopwords.words('english'))
+        except Exception as e:
+            print(f"Using fallback stopwords due to error: {e}")
+            stop_words = FALLBACK_STOPWORDS
+        
+        # Tokenize safely
+        try:
+            from nltk.tokenize import word_tokenize
+            words = word_tokenize(text.lower())
+        except Exception as e:
+            print(f"Using fallback word tokenization due to error: {e}")
+            words = fallback_word_tokenize(text)
+        
         words = [word for word in words if word.isalnum() and word not in stop_words]
         
         # Get word frequencies
-        freq_dist = nltk.FreqDist(words)
-        most_common = freq_dist.most_common(20)  # Get top 20 words
+        try:
+            from nltk import FreqDist
+            freq_dist = FreqDist(words)
+            most_common = freq_dist.most_common(20)  # Get top 20 words
+        except Exception as e:
+            print(f"Using fallback frequency distribution due to error: {e}")
+            # Fallback to simple counting
+            word_freq = {}
+            for word in words:
+                word_freq[word] = word_freq.get(word, 0) + 1
+            most_common = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:20]
         
         # Extract bigrams and trigrams around key words
         key_phrases = []
-        sentences = sent_tokenize(text)
+        
+        # Try to use NLTK's sent_tokenize, fallback to our own if it fails
+        try:
+            from nltk.tokenize import sent_tokenize
+            sentences = sent_tokenize(text)
+        except Exception as e:
+            print(f"Using fallback sentence tokenization due to error: {e}")
+            sentences = fallback_sent_tokenize(text)
         
         for sentence in sentences:
             sent_lower = sentence.lower()
             for word, _ in most_common:
                 if word in sent_lower:
                     # Find a window around the key word
-                    words = nltk.word_tokenize(sent_lower)
+                    try:
+                        from nltk.tokenize import word_tokenize
+                        words = word_tokenize(sent_lower)
+                    except Exception:
+                        words = sent_lower.split()
+                    
                     try:
                         idx = words.index(word)
                         start = max(0, idx - 2)
@@ -189,11 +253,24 @@ def extract_key_phrases(text, num_phrases=5):
 def extractive_summarize(text, num_sentences=5, randomness=False):
     """Generate an extractive summary using the TextRank algorithm."""
     try:
-        stop_words = set(stopwords.words('english'))
+        # Get stopwords safely
+        try:
+            from nltk.corpus import stopwords
+            stop_words = set(stopwords.words('english'))
+        except Exception as e:
+            print(f"Using fallback stopwords due to error: {e}")
+            stop_words = FALLBACK_STOPWORDS
         
         # Clean and split the text into sentences
         cleaned_text = clean_text(text)
-        sentences = sent_tokenize(cleaned_text)
+        
+        # Try NLTK's sentence tokenizer, fallback to our own if it fails
+        try:
+            from nltk.tokenize import sent_tokenize
+            sentences = sent_tokenize(cleaned_text)
+        except Exception as e:
+            print(f"Using fallback sentence tokenizer due to error: {e}")
+            sentences = fallback_sent_tokenize(cleaned_text)
         
         # Handle very short texts
         if len(sentences) <= num_sentences:
@@ -239,21 +316,25 @@ def extractive_summarize(text, num_sentences=5, randomness=False):
     except Exception as e:
         print(f"Error in extractive summarization: {e}")
         # Fallback to a simpler approach
-        sentences = sent_tokenize(text)
+        sentences = fallback_sent_tokenize(text)
         num_sentences = min(num_sentences, len(sentences))
         summary = ' '.join(sentences[:num_sentences])
         return summary
-
-def process_chunk_for_summary(chunk, summarizer=None, max_length=150, min_length=40, use_fast_model=True, randomness=False):
-    """Process a single chunk for summarization."""
-    return summarize_text_chunk(chunk, summarizer, max_length, min_length, use_fast_model, randomness)
 
 def rephrase_sentence(sentence):
     """Simple sentence rephrasing by changing word order and structure."""
     # This is a very basic implementation - you might want to use more advanced NLP
     # for proper rephrasing in a production system
     
-    words = nltk.word_tokenize(sentence)
+    try:
+        from nltk.tokenize import word_tokenize
+        from nltk import pos_tag
+        words = word_tokenize(sentence)
+    except Exception:
+        # Fallback to simple word splitting
+        words = sentence.split()
+        # Cannot do POS tagging, so return the sentence as is
+        return sentence
     
     # Check if sentence is long enough to rephrase
     if len(words) < 5:
@@ -261,7 +342,7 @@ def rephrase_sentence(sentence):
         
     try:
         # Get sentence parts
-        tagged = nltk.pos_tag(words)
+        tagged = pos_tag(words)
         
         # Different simple rephrasing strategies
         strategies = [
@@ -341,7 +422,12 @@ def summarize_text_chunk(text, summarizer=None, max_length=150, min_length=40, u
         # If randomness is enabled, potentially rephrase some sentences
         if randomness:
             try:
-                sentences = sent_tokenize(summary)
+                try:
+                    from nltk.tokenize import sent_tokenize
+                    sentences = sent_tokenize(summary)
+                except Exception:
+                    sentences = fallback_sent_tokenize(summary)
+                    
                 new_sentences = []
                 
                 for sentence in sentences:
@@ -388,6 +474,10 @@ def summarize_text_chunk(text, summarizer=None, max_length=150, min_length=40, u
     else:
         # Fallback to extractive summarization
         return extractive_summarize(text, num_sentences=5, randomness=randomness)
+
+def process_chunk_for_summary(chunk, summarizer=None, max_length=150, min_length=40, use_fast_model=True, randomness=False):
+    """Process a single chunk for summarization."""
+    return summarize_text_chunk(chunk, summarizer, max_length, min_length, use_fast_model, randomness)
 
 def summarize_text_in_chunks(text, summarizer=None, chunk_size=2000, max_length=150, min_length=40, 
                             use_fast_model=True, randomness=False):
@@ -630,3 +720,8 @@ def summarize_multiple_texts(texts, summarizer=None, max_length=150, min_length=
     )
     
     return final_summary
+
+# Initialize NLTK at module load time
+print("Initializing summarizer module...")
+ensure_nltk()
+print("Summarizer module initialized")
