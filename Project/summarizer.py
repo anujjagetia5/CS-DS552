@@ -9,6 +9,54 @@ import threading
 import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# At the top of your file after imports
+def ensure_nltk_resources():
+    """Ensure NLTK resources are available, with fallbacks if needed."""
+    # Try to load NLTK resources
+    try:
+        nltk.data.find('tokenizers/punkt')
+        nltk.data.find('corpora/stopwords')
+        return True
+    except LookupError as e:
+        print(f"NLTK resource error: {e}")
+        # Try download again directly
+        try:
+            nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
+            os.makedirs(nltk_data_dir, exist_ok=True)
+            nltk.data.path.insert(0, nltk_data_dir)
+            nltk.download('punkt', download_dir=nltk_data_dir)
+            nltk.download('stopwords', download_dir=nltk_data_dir)
+            return True
+        except Exception as e2:
+            print(f"Failed to download resources: {e2}")
+            return False
+
+# Call this function at module initialization
+ensure_nltk_resources()
+
+# Then modify your extractive_summarize function to include a fallback
+def extractive_summarize(text, num_sentences=5, randomness=False):
+    """Generate an extractive summary using the TextRank algorithm."""
+    try:
+        # Clean and split the text into sentences
+        cleaned_text = clean_text(text)
+        
+        try:
+            # Try NLTK's tokenizer
+            stop_words = set(stopwords.words('english'))
+            sentences = sent_tokenize(cleaned_text)
+        except Exception as e:
+            print(f"Using fallback tokenization due to error: {e}")
+            # Simple fallback tokenization
+            sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', cleaned_text) if s.strip()]
+            stop_words = {'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'else', 'when', 
+                         'at', 'from', 'by', 'for', 'with', 'about', 'against', 'between'}
+        
+        # Handle very short texts
+        if len(sentences) <= num_sentences:
+            return text
+            
+
 # Initialize NLTK
 try:
     nltk.data.find('tokenizers/punkt')
