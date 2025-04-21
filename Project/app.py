@@ -95,9 +95,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Application Header# Display the summary content
-st.markdown(f'<div class="summary-content"></div>', unsafe_allow_html=True)
-
 # App description
 st.markdown("""
 <div class="info-box">
