@@ -4,7 +4,7 @@ pymupdf
 PyPDF2
 transformers
 torch
-nltk
+nltk = 3.8.1
 numpy
 scikit-learn
 tqdm
